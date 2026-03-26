@@ -9,8 +9,7 @@ const https = require('https');
 const fs = require('fs');
 const path = require('path');
 
-// Получи БЕСПЛАТНЫЙ ключ на: aistudio.google.com
-// Ключ должен начинаться с AIzaSy...
+// Ключ задаётся через переменную окружения на Render
 const API_KEY = process.env.GEMINI_API_KEY;
 const PORT = process.env.PORT || 3000;
 
@@ -77,9 +76,12 @@ const server = http.createServer((req, res) => {
         system_instruction: { parts: [{ text: SYSTEM_PROMPT }] },
         contents: contents,
         generationConfig: {
-          maxOutputTokens: 150,
+          maxOutputTokens: 1024,
           temperature: 1.0,
-          topP: 0.95
+          topP: 0.95,
+          thinkingConfig: {
+            thinkingBudget: 0
+          }
         },
         safetySettings: [
           { category: "HARM_CATEGORY_HARASSMENT",        threshold: "BLOCK_ONLY_HIGH" },
