@@ -11,7 +11,7 @@ const path = require('path');
 
 // Получи БЕСПЛАТНЫЙ ключ на: aistudio.google.com
 // Ключ должен начинаться с AIzaSy...
-const API_KEY = process.env.GEMINI_API_KEY || 'AIzaSyD2PVQSWxYINFb_8XN7wdA1SefcebMU0Tg';
+const API_KEY = process.env.GEMINI_API_KEY || 'AIzaSyAf3yxKUYwjH0yAV-nv62nGK0L3p494aCY';
 const PORT = process.env.PORT || 3000;
 
 const SYSTEM_PROMPT = `You are ROBO — a witty, sarcastic AI game character in a "battle of wits" game. 
