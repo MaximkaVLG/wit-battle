@@ -10,7 +10,8 @@ const fs = require('fs');
 const path = require('path');
 
 // Получи БЕСПЛАТНЫЙ ключ на: aistudio.google.com
-const API_KEY = 'AIzaSyD2PVQSWxYINFb_8XN7wdA1SefcebMU0Tg';
+// Ключ должен начинаться с AIzaSy...
+const API_KEY = process.env.GEMINI_API_KEY || 'ВСТАВЬ_СЮДА_СВОЙ_КЛЮЧ';
 const PORT = process.env.PORT || 3000;
 
 const SYSTEM_PROMPT = `You are ROBO — a witty, sarcastic AI game character in a "battle of wits" game. 
@@ -50,6 +51,8 @@ const server = http.createServer((req, res) => {
     let body = '';
     req.on('data', chunk => body += chunk);
     req.on('end', () => {
+      console.log('[WitBattle] Получен запрос:', body.substring(0, 200));
+
       let parsed;
       try { parsed = JSON.parse(body); } catch(e) {
         res.writeHead(400, { 'Content-Type': 'application/json' });
@@ -60,7 +63,6 @@ const server = http.createServer((req, res) => {
       // Формируем историю для Gemini
       const contents = [];
       if (parsed.messages && parsed.messages.length > 0) {
-        // Добавляем историю
         for (const m of parsed.messages) {
           contents.push({
             role: m.role === 'assistant' ? 'model' : 'user',
@@ -68,7 +70,6 @@ const server = http.createServer((req, res) => {
           });
         }
       } else if (parsed.message) {
-        // Простой режим (из Roblox — одно сообщение)
         contents.push({ role: 'user', parts: [{ text: parsed.message }] });
       }
 
@@ -88,6 +89,8 @@ const server = http.createServer((req, res) => {
         ]
       });
 
+      console.log('[WitBattle] Отправляем в Gemini, contents:', JSON.stringify(contents).substring(0, 300));
+
       const options = {
         hostname: 'generativelanguage.googleapis.com',
         path: `/v1beta/models/gemini-2.0-flash:generateContent?key=${API_KEY}`,
@@ -104,13 +107,18 @@ const server = http.createServer((req, res) => {
         proxyRes.on('end', () => {
           try {
             const geminiResp = JSON.parse(data);
+            
+            // === ОТЛАДКА: смотрим что вернул Gemini ===
+            console.log('[Gemini RAW]', JSON.stringify(geminiResp).substring(0, 500));
+
             const text = geminiResp.candidates?.[0]?.content?.parts?.[0]?.text;
 
             if (text) {
+              console.log('[WitBattle] Ответ Gemini:', text.trim());
               res.writeHead(200, { 'Content-Type': 'application/json' });
               res.end(JSON.stringify({ ok: true, text: text.trim() }));
             } else {
-              // Разные fallback-фразы чтобы не повторялись
+              console.log('[WitBattle] Gemini не вернул текст! Полный ответ:', data.substring(0, 500));
               const fallbacks = [
                 'Даже мой процессор отказывается это обрабатывать — слишком скучно.',
                 'Ты умудрился сломать мой генератор сарказма. Поздравляю, это талант.',
@@ -123,6 +131,7 @@ const server = http.createServer((req, res) => {
               res.end(JSON.stringify({ ok: true, text: fb }));
             }
           } catch(e) {
+            console.log('[WitBattle] Ошибка парсинга:', e.message, 'Raw:', data.substring(0, 300));
             res.writeHead(500, { 'Content-Type': 'application/json' });
             res.end(JSON.stringify({ ok: false, error: 'Parse error: ' + e.message }));
           }
@@ -130,6 +139,7 @@ const server = http.createServer((req, res) => {
       });
 
       proxyReq.on('error', err => {
+        console.log('[WitBattle] Ошибка сети:', err.message);
         res.writeHead(500, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ ok: false, error: err.message }));
       });
@@ -148,5 +158,6 @@ server.listen(PORT, () => {
   console.log('  ✅  WIT BATTLE сервер запущен!');
   console.log(`  👉  Браузер:  http://localhost:${PORT}`);
   console.log(`  🎮  Roblox вызывает: http://ТВОЙ_ДОМЕН/api/chat`);
+  console.log(`  🔑  API ключ: ${API_KEY ? API_KEY.substring(0, 8) + '...' : 'НЕ ЗАДАН!'}`);
   console.log('');
 });
